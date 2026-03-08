@@ -567,7 +567,8 @@ impl<'a> Parser<'a> {
                 return None;
             }
 
-            let explicit_type = self.parse_type_annotation();
+            let explicit_type =
+                self.parse_required_variable_type("Expected variable type after 'let'")?;
             let name = self.expect_identifier("Expected variable name")?;
             self.expect(
                 |kind| matches!(kind, TokenKind::Assign),
@@ -581,7 +582,7 @@ impl<'a> Parser<'a> {
 
             let decl = VarDecl {
                 name,
-                explicit_type,
+                explicit_type: Some(explicit_type),
                 initializer,
                 entitlement,
                 span: let_token.span,
@@ -628,7 +629,8 @@ impl<'a> Parser<'a> {
         span: Span,
         entitlement: Option<String>,
     ) -> Option<VarDecl> {
-        let explicit_type = self.parse_type_annotation();
+        let explicit_type =
+            self.parse_required_variable_type("Expected variable type after 'let'")?;
 
         let name = self.expect_identifier("Expected variable name")?;
         self.expect(
@@ -640,7 +642,7 @@ impl<'a> Parser<'a> {
 
         Some(VarDecl {
             name,
-            explicit_type,
+            explicit_type: Some(explicit_type),
             initializer,
             entitlement,
             span,
@@ -675,6 +677,14 @@ impl<'a> Parser<'a> {
         }
 
         result
+    }
+
+    fn parse_required_variable_type(&mut self, error_message: &str) -> Option<ValueType> {
+        let parsed = self.parse_type_annotation();
+        if parsed.is_none() {
+            self.diagnostics.error(Some(self.current().span), error_message);
+        }
+        parsed
     }
 
     fn parse_expression(&mut self) -> Option<Expr> {

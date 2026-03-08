@@ -81,6 +81,9 @@ fn run() -> Result<(), String> {
         };
 
         print_diagnostics(source_path, &diagnostics);
+        if diagnostics.has_errors() {
+            return Err("Parsing failed".to_string());
+        }
         parsed_sources.push(ParsedSource {
             path: source_path.clone(),
             program,
