@@ -1,4 +1,5 @@
 # Checkbe Compiler
+# СДЕЛАНО ЧЕРЕЗ ИИ. НЕ ДЛЯ РЕАЛЬНОГО ИСПОЛЬЗОВАНИЯ.
 
 Компилятор языка `Checkbe` на Rust с LLVM (`inkwell`) и Boehm GC.
 
@@ -88,6 +89,3 @@ runtime/
 
 - `Bridge` подключается через `import Bridge`.
 - Функция `Bridge.println(...)` поддерживает типы `int`, `float`, `string`, `bool`.
-
-## Примеры
-- `examples/guess.checkbe` — игра Guess The Number (`readln`, `Int(...)`, массивы).
