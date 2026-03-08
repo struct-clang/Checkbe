@@ -16,6 +16,7 @@ use crate::ast::{
     AssignTarget, BinaryOp, CallTarget, Expr, Item, Program, Stmt, UnaryOp, ValueType, VarDecl,
 };
 use crate::module_system::ResolvedExternalCall;
+use crate::parser::parse_expression_fragment;
 use crate::sema::SemanticModel;
 use crate::span::Span;
 use crate::string_interp::{parse_segments, Segment};
@@ -365,6 +366,16 @@ impl<'ctx, 'a> CodeGenerator<'ctx, 'a> {
                 else_branch,
                 ..
             } => self.generate_if(condition, then_branch, else_branch, locals, function_return_type),
+            Stmt::While {
+                condition,
+                body,
+                ..
+            } => self.generate_while(condition, body, locals, function_return_type),
+            Stmt::DoWhile {
+                body,
+                condition,
+                ..
+            } => self.generate_do_while(body, condition, locals, function_return_type),
             Stmt::Expr { expr, .. } => {
                 self.generate_expr(expr, locals)?;
                 Ok(())
@@ -520,6 +531,88 @@ impl<'ctx, 'a> CodeGenerator<'ctx, 'a> {
         Ok(())
     }
 
+    fn generate_while(
+        &mut self,
+        condition: &Expr,
+        body: &[Stmt],
+        locals: &mut HashMap<String, VarBinding<'ctx>>,
+        function_return_type: &ValueType,
+    ) -> Result<(), String> {
+        let function = self.current_function()?;
+        let cond_bb = self.context.append_basic_block(function, "while_cond");
+        let body_bb = self.context.append_basic_block(function, "while_body");
+        let cont_bb = self.context.append_basic_block(function, "while_cont");
+
+        self.builder
+            .build_unconditional_branch(cond_bb)
+            .map_err(builder_error)?;
+
+        self.builder.position_at_end(cond_bb);
+        let cond_value = self.generate_value(condition, locals)?;
+        let cond = self.expect_bool(cond_value, condition.span())?;
+        self.builder
+            .build_conditional_branch(cond, body_bb, cont_bb)
+            .map_err(builder_error)?;
+
+        self.builder.position_at_end(body_bb);
+        let mut loop_locals = locals.clone();
+        for stmt in body {
+            if self.current_block_terminated() {
+                break;
+            }
+            self.generate_stmt(stmt, &mut loop_locals, function_return_type)?;
+        }
+        if !self.current_block_terminated() {
+            self.builder
+                .build_unconditional_branch(cond_bb)
+                .map_err(builder_error)?;
+        }
+
+        self.builder.position_at_end(cont_bb);
+        Ok(())
+    }
+
+    fn generate_do_while(
+        &mut self,
+        body: &[Stmt],
+        condition: &Expr,
+        locals: &mut HashMap<String, VarBinding<'ctx>>,
+        function_return_type: &ValueType,
+    ) -> Result<(), String> {
+        let function = self.current_function()?;
+        let body_bb = self.context.append_basic_block(function, "do_body");
+        let cond_bb = self.context.append_basic_block(function, "do_cond");
+        let cont_bb = self.context.append_basic_block(function, "do_cont");
+
+        self.builder
+            .build_unconditional_branch(body_bb)
+            .map_err(builder_error)?;
+
+        self.builder.position_at_end(body_bb);
+        let mut loop_locals = locals.clone();
+        for stmt in body {
+            if self.current_block_terminated() {
+                break;
+            }
+            self.generate_stmt(stmt, &mut loop_locals, function_return_type)?;
+        }
+        if !self.current_block_terminated() {
+            self.builder
+                .build_unconditional_branch(cond_bb)
+                .map_err(builder_error)?;
+        }
+
+        self.builder.position_at_end(cond_bb);
+        let cond_value = self.generate_value(condition, locals)?;
+        let cond = self.expect_bool(cond_value, condition.span())?;
+        self.builder
+            .build_conditional_branch(cond, body_bb, cont_bb)
+            .map_err(builder_error)?;
+
+        self.builder.position_at_end(cont_bb);
+        Ok(())
+    }
+
     fn generate_expr(
         &mut self,
         expr: &Expr,
@@ -628,9 +721,10 @@ impl<'ctx, 'a> CodeGenerator<'ctx, 'a> {
         for segment in segments {
             let segment_value = match segment {
                 Segment::Text(part) => self.gc_string_literal(&part)?,
-                Segment::Variable(name) => {
-                    let var_expr = Expr::Identifier(name, span);
-                    let value = self.generate_value(&var_expr, locals)?;
+                Segment::Expression(code) => {
+                    let expr = parse_expression_fragment(&code)
+                        .map_err(|message| format!("Invalid interpolation '{}': {}", code, message))?;
+                    let value = self.generate_value(&expr, locals)?;
                     self.value_to_string(value, span)?
                 }
             };
@@ -1345,21 +1439,59 @@ impl<'ctx, 'a> CodeGenerator<'ctx, 'a> {
                 }
             }
             CallTarget::Qualified { module, name } => {
-                if module == "Bridge" && (name == "println" || name == "print") {
-                    for arg in args {
-                        let value = self.generate_value(arg, locals)?;
-                        let print_fn = self.bridge_print_function(&value.ty)?;
-                        self.builder
-                            .build_call(print_fn, &[value.value.into()], "bridge_print")
-                            .map_err(builder_error)?;
+                if module == "Bridge" {
+                    if name == "println" || name == "print" {
+                        for arg in args {
+                            let value = self.generate_value(arg, locals)?;
+                            let print_fn = self.bridge_print_function(&value.ty)?;
+                            self.builder
+                                .build_call(print_fn, &[value.value.into()], "bridge_print")
+                                .map_err(builder_error)?;
+                        }
+                        if name == "println" {
+                            let newline_fn = self.bridge_newline_function();
+                            self.builder
+                                .build_call(newline_fn, &[], "bridge_newline")
+                                .map_err(builder_error)?;
+                        }
+                        return Ok(None);
                     }
-                    if name == "println" {
-                        let newline_fn = self.bridge_newline_function();
+
+                    if name == "sleep" || name == "usleep" {
+                        if args.len() != 1 {
+                            return Err(format!(
+                                "Bridge.{} expects exactly one int argument ({})",
+                                name, span
+                            ));
+                        }
+                        let arg = self.generate_value(&args[0], locals)?;
+                        if arg.ty != ValueType::Int {
+                            return Err(format!(
+                                "Bridge.{} expects int, got '{}' ({})",
+                                name,
+                                arg.ty.as_str(),
+                                span
+                            ));
+                        }
+                        let sleep_fn = if name == "sleep" {
+                            self.bridge_sleep_function()
+                        } else {
+                            self.bridge_usleep_function()
+                        };
                         self.builder
-                            .build_call(newline_fn, &[], "bridge_newline")
+                            .build_call(sleep_fn, &[arg.value.into()], "bridge_sleep")
                             .map_err(builder_error)?;
+                        return Ok(None);
                     }
-                    return Ok(None);
+
+                    if name == "system" {
+                        let command = self.build_system_command(args, locals, span)?;
+                        let system_fn = self.bridge_system_function();
+                        self.builder
+                            .build_call(system_fn, &[command.value.into()], "bridge_system")
+                            .map_err(builder_error)?;
+                        return Ok(None);
+                    }
                 }
 
                 let mut typed_args = Vec::with_capacity(args.len());
@@ -1489,6 +1621,80 @@ impl<'ctx, 'a> CodeGenerator<'ctx, 'a> {
                     None,
                 )
             })
+    }
+
+    fn bridge_sleep_function(&self) -> FunctionValue<'ctx> {
+        self.module
+            .get_function("bridge_sleep")
+            .unwrap_or_else(|| {
+                self.module.add_function(
+                    "bridge_sleep",
+                    self.context
+                        .void_type()
+                        .fn_type(&[self.context.i64_type().into()], false),
+                    None,
+                )
+            })
+    }
+
+    fn bridge_usleep_function(&self) -> FunctionValue<'ctx> {
+        self.module
+            .get_function("bridge_usleep")
+            .unwrap_or_else(|| {
+                self.module.add_function(
+                    "bridge_usleep",
+                    self.context
+                        .void_type()
+                        .fn_type(&[self.context.i64_type().into()], false),
+                    None,
+                )
+            })
+    }
+
+    fn bridge_system_function(&self) -> FunctionValue<'ctx> {
+        let ptr = self.context.ptr_type(AddressSpace::default());
+        self.module
+            .get_function("bridge_system")
+            .unwrap_or_else(|| {
+                self.module
+                    .add_function("bridge_system", self.context.void_type().fn_type(&[ptr.into()], false), None)
+            })
+    }
+
+    fn build_system_command(
+        &mut self,
+        args: &[Expr],
+        locals: &HashMap<String, VarBinding<'ctx>>,
+        span: Span,
+    ) -> Result<TypedValue<'ctx>, String> {
+        if args.is_empty() {
+            return self.gc_string_literal("");
+        }
+
+        let mut command = self.generate_value(&args[0], locals)?;
+        if command.ty != ValueType::String {
+            return Err(format!(
+                "Bridge.system expects only string arguments, got '{}' ({})",
+                command.ty.as_str(),
+                span
+            ));
+        }
+
+        for argument in args.iter().skip(1) {
+            let next = self.generate_value(argument, locals)?;
+            if next.ty != ValueType::String {
+                return Err(format!(
+                    "Bridge.system expects only string arguments, got '{}' ({})",
+                    next.ty.as_str(),
+                    span
+                ));
+            }
+            let separator = self.gc_string_literal(" ")?;
+            command = self.concat_strings(command, separator)?;
+            command = self.concat_strings(command, next)?;
+        }
+
+        Ok(command)
     }
 
     fn cast_value_if_needed(

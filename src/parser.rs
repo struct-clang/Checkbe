@@ -3,12 +3,51 @@ use crate::ast::{
     ImportDecl, Item, Program, RightDecl, Stmt, UnaryOp, ValueType, VarDecl,
 };
 use crate::diagnostics::Diagnostics;
+use crate::lexer;
 use crate::span::Span;
 use crate::token::{Token, TokenKind};
 
 pub fn parse(tokens: Vec<Token>, diagnostics: &mut Diagnostics) -> Option<Program> {
     let mut parser = Parser::new(tokens, diagnostics);
     parser.parse_program()
+}
+
+pub fn parse_expression_fragment(fragment: &str) -> Result<Expr, String> {
+    let mut diagnostics = Diagnostics::default();
+    let tokens = lexer::lex(fragment, &mut diagnostics);
+    if diagnostics.has_errors() {
+        let message = diagnostics
+            .items()
+            .first()
+            .map(|item| item.message.clone())
+            .unwrap_or_else(|| "Invalid interpolation expression".to_string());
+        return Err(message);
+    }
+
+    let mut parser = Parser::new(tokens, &mut diagnostics);
+    let Some(expr) = parser.parse_expression() else {
+        let message = diagnostics
+            .items()
+            .first()
+            .map(|item| item.message.clone())
+            .unwrap_or_else(|| "Expected expression in interpolation".to_string());
+        return Err(message);
+    };
+
+    if !matches!(parser.current().kind, TokenKind::Eof) {
+        return Err("Unexpected tokens after interpolation expression".to_string());
+    }
+
+    if diagnostics.has_errors() {
+        let message = diagnostics
+            .items()
+            .first()
+            .map(|item| item.message.clone())
+            .unwrap_or_else(|| "Invalid interpolation expression".to_string());
+        return Err(message);
+    }
+
+    Ok(expr)
 }
 
 struct Parser<'a> {
@@ -252,7 +291,7 @@ impl<'a> Parser<'a> {
             let let_token = self.advance();
             let entitlement = if self
                 .consume_if(|kind| matches!(kind, TokenKind::Colon))
-                .is_some()
+            .is_some()
             {
                 Some(self.expect_identifier("Expected capability name after ':'")?)
             } else {
@@ -277,6 +316,18 @@ impl<'a> Parser<'a> {
 
         if self.check(|kind| matches!(kind, TokenKind::If)) {
             return self.parse_if_statement();
+        }
+
+        if self.check(|kind| matches!(kind, TokenKind::While)) {
+            return self.parse_while_statement();
+        }
+
+        if self.check(|kind| matches!(kind, TokenKind::Do)) {
+            return self.parse_do_while_statement();
+        }
+
+        if self.check(|kind| matches!(kind, TokenKind::For)) {
+            return self.parse_for_statement();
         }
 
         if self.check(|kind| matches!(kind, TokenKind::LBrace)) {
@@ -357,7 +408,11 @@ impl<'a> Parser<'a> {
             .consume_if(|kind| matches!(kind, TokenKind::Else))
             .is_some()
         {
-            self.parse_block_statements()?
+            if self.check(|kind| matches!(kind, TokenKind::If)) {
+                vec![self.parse_if_statement()?]
+            } else {
+                self.parse_block_statements()?
+            }
         } else {
             Vec::new()
         };
@@ -368,6 +423,204 @@ impl<'a> Parser<'a> {
             else_branch,
             span: if_token.span,
         })
+    }
+
+    fn parse_while_statement(&mut self) -> Option<Stmt> {
+        let while_token = self.expect(
+            |kind| matches!(kind, TokenKind::While),
+            "Expected 'while' keyword",
+        )?;
+        self.expect(
+            |kind| matches!(kind, TokenKind::LParen),
+            "Expected '(' after while",
+        )?;
+        let condition = self.parse_expression()?;
+        self.expect(
+            |kind| matches!(kind, TokenKind::RParen),
+            "Expected ')' after while condition",
+        )?;
+        let body = self.parse_block_statements()?;
+        Some(Stmt::While {
+            condition,
+            body,
+            span: while_token.span,
+        })
+    }
+
+    fn parse_do_while_statement(&mut self) -> Option<Stmt> {
+        let do_token = self.expect(
+            |kind| matches!(kind, TokenKind::Do),
+            "Expected 'do' keyword",
+        )?;
+        let body = self.parse_block_statements()?;
+        self.expect(
+            |kind| matches!(kind, TokenKind::While),
+            "Expected 'while' after do-block",
+        )?;
+        self.expect(
+            |kind| matches!(kind, TokenKind::LParen),
+            "Expected '(' after while in do-while",
+        )?;
+        let condition = self.parse_expression()?;
+        self.expect(
+            |kind| matches!(kind, TokenKind::RParen),
+            "Expected ')' after do-while condition",
+        )?;
+        self.consume_if(|kind| matches!(kind, TokenKind::Semicolon));
+        Some(Stmt::DoWhile {
+            body,
+            condition,
+            span: do_token.span,
+        })
+    }
+
+    fn parse_for_statement(&mut self) -> Option<Stmt> {
+        let for_token = self.expect(
+            |kind| matches!(kind, TokenKind::For),
+            "Expected 'for' keyword",
+        )?;
+        self.expect(
+            |kind| matches!(kind, TokenKind::LParen),
+            "Expected '(' after for",
+        )?;
+
+        let init = self.parse_for_header_clause(true)?;
+        let condition = if self
+            .consume_if(|kind| matches!(kind, TokenKind::Semicolon))
+            .is_some()
+        {
+            None
+        } else {
+            let expr = self.parse_expression()?;
+            self.expect(
+                |kind| matches!(kind, TokenKind::Semicolon),
+                "Expected ';' after for condition",
+            )?;
+            Some(expr)
+        };
+
+        let update = self.parse_for_header_clause(false)?;
+        self.expect(
+            |kind| matches!(kind, TokenKind::RParen),
+            "Expected ')' after for clauses",
+        )?;
+        let body = self.parse_block_statements()?;
+
+        let mut while_body = body;
+        if let Some(update_stmt) = update {
+            while_body.push(update_stmt);
+        }
+
+        let while_stmt = Stmt::While {
+            condition: condition.unwrap_or(Expr::BoolLiteral(true, for_token.span)),
+            body: while_body,
+            span: for_token.span,
+        };
+
+        if let Some(init_stmt) = init {
+            Some(Stmt::Block {
+                statements: vec![init_stmt, while_stmt],
+                span: for_token.span,
+            })
+        } else {
+            Some(while_stmt)
+        }
+    }
+
+    fn parse_for_header_clause(&mut self, expect_semicolon: bool) -> Option<Option<Stmt>> {
+        if expect_semicolon {
+            if self.check(|kind| matches!(kind, TokenKind::Semicolon)) {
+                self.advance();
+                return Some(None);
+            }
+        } else if self.check(|kind| matches!(kind, TokenKind::RParen)) {
+            return Some(None);
+        }
+
+        if self.check(|kind| matches!(kind, TokenKind::Let)) {
+            let let_token = self.advance();
+            let entitlement = if self
+                .consume_if(|kind| matches!(kind, TokenKind::Colon))
+                .is_some()
+            {
+                Some(self.expect_identifier("Expected entitlement name after ':'")?)
+            } else {
+                None
+            };
+
+            if self.check(|kind| matches!(kind, TokenKind::Func))
+                || self.check_identifier_text("capability")
+                || self.check_identifier_text("right")
+            {
+                self.diagnostics.error(
+                    Some(let_token.span),
+                    "Only variable declarations with let are allowed in for-clause",
+                );
+                return None;
+            }
+
+            if !expect_semicolon {
+                self.diagnostics.error(
+                    Some(let_token.span),
+                    "for update clause cannot contain let-declaration",
+                );
+                return None;
+            }
+
+            let explicit_type = self.parse_type_annotation();
+            let name = self.expect_identifier("Expected variable name")?;
+            self.expect(
+                |kind| matches!(kind, TokenKind::Assign),
+                "Expected '=' in variable declaration",
+            )?;
+            let initializer = self.parse_expression()?;
+            self.expect(
+                |kind| matches!(kind, TokenKind::Semicolon),
+                "Expected ';' after for init declaration",
+            )?;
+
+            let decl = VarDecl {
+                name,
+                explicit_type,
+                initializer,
+                entitlement,
+                span: let_token.span,
+            };
+            return Some(Some(Stmt::VarDecl(decl)));
+        }
+
+        let expr = self.parse_expression()?;
+        let statement = if self
+            .consume_if(|kind| matches!(kind, TokenKind::Assign))
+            .is_some()
+        {
+            let span = expr.span();
+            let Some(target) = self.expression_to_assign_target(expr) else {
+                self.diagnostics.error(
+                    Some(span),
+                    "Invalid assignment target in for-clause",
+                );
+                return None;
+            };
+            let value = self.parse_expression()?;
+            Stmt::Assign {
+                target,
+                value,
+                span,
+            }
+        } else {
+            let span = expr.span();
+            Stmt::Expr { expr, span }
+        };
+
+        if expect_semicolon {
+            self.expect(
+                |kind| matches!(kind, TokenKind::Semicolon),
+                "Expected ';' after for init clause",
+            )?;
+        }
+
+        Some(Some(statement))
     }
 
     fn parse_variable_decl_from_current(
@@ -902,6 +1155,9 @@ impl<'a> Parser<'a> {
                 | TokenKind::RBrace
                 | TokenKind::Semicolon
                 | TokenKind::If
+                | TokenKind::While
+                | TokenKind::Do
+                | TokenKind::For
                 | TokenKind::Let
                 | TokenKind::Return
         ) {

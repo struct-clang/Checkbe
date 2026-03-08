@@ -71,8 +71,8 @@ pub fn merge_sources(sources: &[ParsedSource], diagnostics: &mut Diagnostics) ->
                 continue;
             };
 
-            let global_name = if index == 0 && func_decl.name == "main" {
-                "main".to_string()
+            let global_name = if index == 0 {
+                func_decl.name.clone()
             } else {
                 format!("{}__{}", sanitized_module, func_decl.name)
             };
@@ -194,6 +194,30 @@ fn transform_stmt(stmt: &Stmt, ctx: &TransformCtx<'_>, diagnostics: &mut Diagnos
                 .iter()
                 .map(|stmt| transform_stmt(stmt, ctx, diagnostics))
                 .collect(),
+            span: *span,
+        },
+        Stmt::While {
+            condition,
+            body,
+            span,
+        } => Stmt::While {
+            condition: transform_expr(condition, ctx, diagnostics),
+            body: body
+                .iter()
+                .map(|stmt| transform_stmt(stmt, ctx, diagnostics))
+                .collect(),
+            span: *span,
+        },
+        Stmt::DoWhile {
+            body,
+            condition,
+            span,
+        } => Stmt::DoWhile {
+            body: body
+                .iter()
+                .map(|stmt| transform_stmt(stmt, ctx, diagnostics))
+                .collect(),
+            condition: transform_expr(condition, ctx, diagnostics),
             span: *span,
         },
         Stmt::Expr { expr, span } => Stmt::Expr {

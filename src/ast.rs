@@ -115,6 +115,16 @@ pub enum Stmt {
         else_branch: Vec<Stmt>,
         span: Span,
     },
+    While {
+        condition: Expr,
+        body: Vec<Stmt>,
+        span: Span,
+    },
+    DoWhile {
+        body: Vec<Stmt>,
+        condition: Expr,
+        span: Span,
+    },
     Expr {
         expr: Expr,
         span: Span,

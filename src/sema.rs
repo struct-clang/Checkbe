@@ -6,6 +6,7 @@ use crate::ast::{
 };
 use crate::diagnostics::Diagnostics;
 use crate::module_system::ModuleRegistry;
+use crate::parser::parse_expression_fragment;
 use crate::span::Span;
 use crate::string_interp::{parse_segments, Segment};
 
@@ -545,6 +546,62 @@ impl<'a> SemanticAnalyzer<'a> {
                     );
                 }
             }
+            Stmt::While {
+                condition,
+                body,
+                span,
+            } => {
+                if let Some(condition_type) = self.analyze_expr(condition, locals, right) {
+                    if condition_type != ValueType::Bool {
+                        self.diagnostics.error(
+                            Some(*span),
+                            format!(
+                                "While condition must be bool, got '{}'",
+                                condition_type.as_str()
+                            ),
+                        );
+                    }
+                }
+
+                let mut loop_locals = locals.clone();
+                for nested in body {
+                    self.analyze_statement(
+                        nested,
+                        &mut loop_locals,
+                        right,
+                        function_return_type,
+                        has_return,
+                    );
+                }
+            }
+            Stmt::DoWhile {
+                body,
+                condition,
+                span,
+            } => {
+                let mut loop_locals = locals.clone();
+                for nested in body {
+                    self.analyze_statement(
+                        nested,
+                        &mut loop_locals,
+                        right,
+                        function_return_type,
+                        has_return,
+                    );
+                }
+
+                if let Some(condition_type) = self.analyze_expr(condition, locals, right) {
+                    if condition_type != ValueType::Bool {
+                        self.diagnostics.error(
+                            Some(*span),
+                            format!(
+                                "Do-while condition must be bool, got '{}'",
+                                condition_type.as_str()
+                            ),
+                        );
+                    }
+                }
+            }
             Stmt::Expr { expr, .. } => {
                 self.analyze_expr(expr, locals, right);
             }
@@ -664,17 +721,27 @@ impl<'a> SemanticAnalyzer<'a> {
                 };
 
                 for segment in segments {
-                    if let Segment::Variable(name) = segment {
-                        let variable = self.lookup_variable(&name, locals);
-                        let Some(variable) = variable else {
+                    if let Segment::Expression(code) = segment {
+                        let parsed = match parse_expression_fragment(&code) {
+                            Ok(expr) => expr,
+                            Err(message) => {
+                                self.diagnostics.error(
+                                    Some(*span),
+                                    format!("Invalid interpolation expression '{}': {}", code, message),
+                                );
+                                return None;
+                            }
+                        };
+
+                        let Some(result_type) = self.analyze_expr(&parsed, locals, right) else {
                             self.diagnostics.error(
                                 Some(*span),
-                                format!("Variable '{}' in interpolation is not declared", name),
+                                format!("Interpolation expression '{}' is invalid", code),
                             );
                             return None;
                         };
-                        self.enforce_read_access(&variable, right, *span);
-                        match variable.ty {
+
+                        match result_type {
                             ValueType::Int
                             | ValueType::Float
                             | ValueType::String
@@ -684,7 +751,7 @@ impl<'a> SemanticAnalyzer<'a> {
                                     Some(*span),
                                     format!(
                                         "Interpolation does not support type '{}'",
-                                        variable.ty.as_str()
+                                        result_type.as_str()
                                     ),
                                 );
                                 return None;
@@ -779,7 +846,7 @@ impl<'a> SemanticAnalyzer<'a> {
                                     inner_type.as_str()
                                 ),
                             );
-                            None
+                            return None;
                         }
                     }
                     UnaryOp::Not => {
@@ -926,27 +993,70 @@ impl<'a> SemanticAnalyzer<'a> {
                         return None;
                     }
 
-                    if module == "Bridge" && (name == "println" || name == "print") {
-                        for argument in args {
-                            let argument_type = self.analyze_expr(argument, locals, right)?;
-                            match argument_type {
-                                ValueType::Int
-                                | ValueType::Float
-                                | ValueType::String
-                                | ValueType::Bool => {}
-                                other => {
+                    if module == "Bridge" {
+                        if name == "println" || name == "print" {
+                            for argument in args {
+                                let argument_type = self.analyze_expr(argument, locals, right)?;
+                                match argument_type {
+                                    ValueType::Int
+                                    | ValueType::Float
+                                    | ValueType::String
+                                    | ValueType::Bool => {}
+                                    other => {
+                                        self.diagnostics.error(
+                                            Some(argument.span()),
+                                            format!(
+                                                "Bridge.{} does not support argument type '{}'",
+                                                name,
+                                                other.as_str()
+                                            ),
+                                        );
+                                        return None;
+                                    }
+                                }
+                            }
+                            return Some(ValueType::Void);
+                        }
+
+                        if name == "sleep" || name == "usleep" {
+                            if args.len() != 1 {
+                                self.diagnostics.error(
+                                    Some(*span),
+                                    format!("Bridge.{} expects exactly one int argument", name),
+                                );
+                                return None;
+                            }
+                            let arg_ty = self.analyze_expr(&args[0], locals, right)?;
+                            if arg_ty != ValueType::Int {
+                                self.diagnostics.error(
+                                    Some(args[0].span()),
+                                    format!(
+                                        "Bridge.{} expects int, got '{}'",
+                                        name,
+                                        arg_ty.as_str()
+                                    ),
+                                );
+                                return None;
+                            }
+                            return Some(ValueType::Void);
+                        }
+
+                        if name == "system" {
+                            for argument in args {
+                                let arg_ty = self.analyze_expr(argument, locals, right)?;
+                                if arg_ty != ValueType::String {
                                     self.diagnostics.error(
                                         Some(argument.span()),
                                         format!(
-                                            "Bridge.println does not support argument type '{}'",
-                                            other.as_str()
+                                            "Bridge.system expects only string arguments, got '{}'",
+                                            arg_ty.as_str()
                                         ),
                                     );
                                     return None;
                                 }
                             }
+                            return Some(ValueType::Void);
                         }
-                        return Some(ValueType::Void);
                     }
 
                     let mut argument_types = Vec::with_capacity(args.len());

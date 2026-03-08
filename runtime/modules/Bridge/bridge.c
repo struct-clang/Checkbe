@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 char *cb_gc_strdup(const char *input);
 
@@ -73,4 +78,33 @@ char *bridge_readln(void) {
     char *result = cb_gc_strdup(line);
     free(line);
     return result;
+}
+
+void bridge_sleep(long long seconds) {
+    if (seconds <= 0) {
+        return;
+    }
+#ifdef _WIN32
+    Sleep((DWORD)(seconds * 1000));
+#else
+    sleep((unsigned int)seconds);
+#endif
+}
+
+void bridge_usleep(long long microseconds) {
+    if (microseconds <= 0) {
+        return;
+    }
+#ifdef _WIN32
+    Sleep((DWORD)(microseconds / 1000));
+#else
+    usleep((useconds_t)microseconds);
+#endif
+}
+
+void bridge_system(const char *command) {
+    if (command == NULL || command[0] == '\0') {
+        return;
+    }
+    (void)system(command);
 }

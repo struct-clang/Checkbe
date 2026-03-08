@@ -65,3 +65,27 @@ symbol = "bridge_print_string"
 args = ["bool"]
 return = "void"
 symbol = "bridge_print_bool"
+
+[[functions]]
+name = "sleep"
+
+[[functions.overloads]]
+args = ["int"]
+return = "void"
+symbol = "bridge_sleep"
+
+[[functions]]
+name = "usleep"
+
+[[functions.overloads]]
+args = ["int"]
+return = "void"
+symbol = "bridge_usleep"
+
+[[functions]]
+name = "system"
+
+[[functions.overloads]]
+args = ["string"]
+return = "void"
+symbol = "bridge_system"

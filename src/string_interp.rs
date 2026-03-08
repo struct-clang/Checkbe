@@ -1,7 +1,7 @@
 #[derive(Clone, Debug)]
 pub enum Segment {
     Text(String),
-    Variable(String),
+    Expression(String),
 }
 
 pub fn parse_segments(input: &str) -> Result<Vec<Segment>, String> {
@@ -22,20 +22,33 @@ pub fn parse_segments(input: &str) -> Result<Vec<Segment>, String> {
             }
 
             let start = i;
-            if !is_ident_start(chars[i]) {
-                return Err("Interpolation expects identifier: \\(name)".to_string());
-            }
-            i += 1;
-            while i < chars.len() && is_ident_continue(chars[i]) {
-                i += 1;
+            let mut nesting = 0usize;
+            while i < chars.len() {
+                match chars[i] {
+                    '(' => {
+                        nesting += 1;
+                        i += 1;
+                    }
+                    ')' => {
+                        if nesting == 0 {
+                            break;
+                        }
+                        nesting -= 1;
+                        i += 1;
+                    }
+                    _ => i += 1,
+                }
             }
 
             if i >= chars.len() || chars[i] != ')' {
                 return Err("Unclosed interpolation: expected ')'".to_string());
             }
 
-            let name: String = chars[start..i].iter().collect();
-            segments.push(Segment::Variable(name));
+            let expr: String = chars[start..i].iter().collect();
+            if expr.trim().is_empty() {
+                return Err("Interpolation expression cannot be empty".to_string());
+            }
+            segments.push(Segment::Expression(expr));
             i += 1;
             continue;
         }
@@ -49,12 +62,4 @@ pub fn parse_segments(input: &str) -> Result<Vec<Segment>, String> {
     }
 
     Ok(segments)
-}
-
-fn is_ident_start(ch: char) -> bool {
-    ch.is_ascii_alphabetic() || ch == '_'
-}
-
-fn is_ident_continue(ch: char) -> bool {
-    ch.is_ascii_alphanumeric() || ch == '_'
 }
