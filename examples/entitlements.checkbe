@@ -1,0 +1,22 @@
+import Bridge
+
+body Application {
+    let capability roCap = new Capability(CAP_READ)
+    let right roRgt = new Right(RIGHT_READ)
+
+    let:roCap int i = 10
+    let int x = 20
+
+    func main() {
+        Bridge.println(i) // OK. Read is allowed by CAP_READ
+        // i = 20 // Error. Write is not allowed by CAP_READ
+        x = 20 // OK. Write is allowed by default.
+    }
+
+    let:roRgt func someFunc() {
+        Bridge.println(i) // OK. Read is allowed.
+        Bridge.println(x) // OK. Read is allowed by default.
+        // i = 20 // Error. Write is not allowed.
+        // x = 20 // Error. Write still is not allowed by RIGHT_READ
+    }
+}
