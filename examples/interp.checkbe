@@ -1,0 +1,14 @@
+import Bridge
+
+body Application {
+    func main() {
+        let int age = 42
+        let bool ok = true
+        let string name = "Alice"
+
+        let string line = "Name: \(name), age: \(age), ok: \(ok)"
+        Bridge.println(line)
+        Bridge.print("Echo: \(name)")
+        Bridge.println()
+    }
+}

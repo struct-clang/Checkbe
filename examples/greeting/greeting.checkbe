@@ -1,0 +1,7 @@
+import Bridge
+
+body GreetingBody {
+    func greet(name: string) -> string {
+        return "Hello, \(name)!"
+    }
+}

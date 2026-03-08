@@ -1,0 +1,9 @@
+.install-test
+extension/*
+target/*
+*.js
+*.json
+*.vsix
+*.DS_Store
+*.log
+.Spotlight-V100

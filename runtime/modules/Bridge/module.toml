@@ -1,0 +1,67 @@
+name = "Bridge"
+library = "bridge"
+native_sources = ["bridge.c"]
+
+[[functions]]
+name = "println"
+
+[[functions.overloads]]
+args = ["int"]
+return = "void"
+symbol = "bridge_println_int"
+
+[[functions.overloads]]
+args = ["float"]
+return = "void"
+symbol = "bridge_println_float"
+
+[[functions.overloads]]
+args = ["string"]
+return = "void"
+symbol = "bridge_println_string"
+
+[[functions.overloads]]
+args = ["string", "string", "string"]
+return = "void"
+symbol = "bridge_println3_string"
+
+[[functions.overloads]]
+args = ["bool"]
+return = "void"
+symbol = "bridge_println_bool"
+
+[[functions]]
+name = "readln"
+
+[[functions.overloads]]
+args = []
+return = "string"
+symbol = "bridge_readln"
+
+[[functions]]
+name = "print"
+
+[[functions.overloads]]
+args = []
+return = "void"
+symbol = "bridge_print_nop"
+
+[[functions.overloads]]
+args = ["int"]
+return = "void"
+symbol = "bridge_print_int"
+
+[[functions.overloads]]
+args = ["float"]
+return = "void"
+symbol = "bridge_print_float"
+
+[[functions.overloads]]
+args = ["string"]
+return = "void"
+symbol = "bridge_print_string"
+
+[[functions.overloads]]
+args = ["bool"]
+return = "void"
+symbol = "bridge_print_bool"
