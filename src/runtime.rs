@@ -162,6 +162,7 @@ pub fn link_binary(
 
     args.push(format!("-L{}", artifacts.gc_lib_dir.display()));
     args.push("-lgc".to_string());
+    args.push("-lm".to_string());
     args.push(format!("-Wl,-rpath,{}", artifacts.gc_lib_dir.display()));
     args.push("-o".to_string());
     args.push(output_path.display().to_string());

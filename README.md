@@ -18,6 +18,7 @@
 - Конвертация в `int`: `Int(value)` для `string/float/bool/int`.
 - `Bridge.readln()` для чтения строки из stdin.
 - `Bridge.print(...)` и `Bridge.println(...)` принимают 0..N аргументов (`int`, `float`, `string`, `bool`).
+- `Network` для базовой работы с сетью: HTTP (`http://`, `get/post/request/status`) и DNS/hostname (`resolve/hostname`).
 - Интерполяция строк в любом строковом литерале: `"Hello, \\(name)"`.
 
 ## Зависимости
@@ -51,7 +52,7 @@ cargo build --release
 ./target/release/checkbe
 ```
 
-Установка в системный префикс (бинарь + runtime/Bridge):
+Установка в системный префикс (бинарь + runtime/Bridge + runtime/Math + runtime/Network):
 
 ```bash
 ./target/release/checkbe --install --prefix /usr/local
@@ -85,7 +86,15 @@ runtime/
     Bridge/
       module.toml
       bridge.c
+    Math/
+      module.toml
+      math.c
+    Network/
+      module.toml
+      network.c
 ```
 
 - `Bridge` подключается через `import Bridge`.
 - Функция `Bridge.println(...)` поддерживает типы `int`, `float`, `string`, `bool`.
+- `Math` подключается через `import Math` (например `Math.max`, `Math.sqrt`, `Math.pow`, `Math.sin`, `Math.log`).
+- `Network` подключается через `import Network` (например `Network.get`, `Network.post`, `Network.status`, `Network.resolve`).

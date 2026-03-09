@@ -52,11 +52,17 @@ pub fn install(prefix: &Path) -> Result<InstallResult, String> {
 fn install_runtime_sources(runtime_root: &Path) -> Result<(), String> {
     let core_dir = runtime_root.join("core");
     let bridge_dir = runtime_root.join("modules/Bridge");
+    let math_dir = runtime_root.join("modules/Math");
+    let network_dir = runtime_root.join("modules/Network");
 
     fs::create_dir_all(&core_dir)
         .map_err(|err| format!("Failed to create {}: {err}", core_dir.display()))?;
     fs::create_dir_all(&bridge_dir)
         .map_err(|err| format!("Failed to create {}: {err}", bridge_dir.display()))?;
+    fs::create_dir_all(&math_dir)
+        .map_err(|err| format!("Failed to create {}: {err}", math_dir.display()))?;
+    fs::create_dir_all(&network_dir)
+        .map_err(|err| format!("Failed to create {}: {err}", network_dir.display()))?;
 
     write_file(
         &core_dir.join("runtime.c"),
@@ -77,6 +83,34 @@ fn install_runtime_sources(runtime_root: &Path) -> Result<(), String> {
         include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/runtime/modules/Bridge/bridge.c"
+        )),
+    )?;
+    write_file(
+        &math_dir.join("module.toml"),
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/runtime/modules/Math/module.toml"
+        )),
+    )?;
+    write_file(
+        &math_dir.join("math.c"),
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/runtime/modules/Math/math.c"
+        )),
+    )?;
+    write_file(
+        &network_dir.join("module.toml"),
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/runtime/modules/Network/module.toml"
+        )),
+    )?;
+    write_file(
+        &network_dir.join("network.c"),
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/runtime/modules/Network/network.c"
         )),
     )?;
 

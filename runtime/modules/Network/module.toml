@@ -1,0 +1,51 @@
+name = "Network"
+library = "network"
+native_sources = ["network.c"]
+
+[[functions]]
+name = "get"
+
+[[functions.overloads]]
+args = ["string"]
+return = "string"
+symbol = "network_get"
+
+[[functions]]
+name = "post"
+
+[[functions.overloads]]
+args = ["string", "string"]
+return = "string"
+symbol = "network_post"
+
+[[functions]]
+name = "request"
+
+[[functions.overloads]]
+args = ["string", "string", "string"]
+return = "string"
+symbol = "network_request"
+
+[[functions]]
+name = "status"
+
+[[functions.overloads]]
+args = ["string"]
+return = "int"
+symbol = "network_status"
+
+[[functions]]
+name = "resolve"
+
+[[functions.overloads]]
+args = ["string"]
+return = "string"
+symbol = "network_resolve"
+
+[[functions]]
+name = "hostname"
+
+[[functions.overloads]]
+args = []
+return = "string"
+symbol = "network_hostname"

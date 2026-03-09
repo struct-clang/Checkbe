@@ -1,0 +1,19 @@
+import Bridge
+import Math
+
+body Application {
+    func main() {
+        let int a = 10
+        let int b = 20
+
+        Bridge.println("Max of \(a) and \(b) is \(Math.max(a, b))")
+        Bridge.println("Min of \(a) and \(b) is \(Math.min(a, b))")
+
+        Bridge.println(Math.euler()) // 2.71828
+        Bridge.println(Math.pi()) // 3.141592
+
+        Bridge.println("Square root of 16 is \(Math.sqrt(16))")
+
+        Bridge.println("2 raised to the power of 3 is \(Math.pow(2, 3))")
+    }
+}

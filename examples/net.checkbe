@@ -1,0 +1,19 @@
+import Bridge
+import Network
+
+body Application {
+    func main() {
+        let string base = "http://127.0.0.1:18080"
+
+        let int code = Network.status("\(base)/hello")
+        let string get_body = Network.get("\(base)/hello")
+        let string post_body = Network.post("\(base)/echo", "name=checkbe")
+        let string localhost = Network.resolve("localhost")
+
+        Bridge.println("Status: \(code)")
+        Bridge.println("GET /hello: \(get_body)")
+        Bridge.println("POST /echo: \(post_body)")
+        Bridge.println("Hostname: \(Network.hostname())")
+        Bridge.println("Resolve localhost: \(localhost)")
+    }
+}

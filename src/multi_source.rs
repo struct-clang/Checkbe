@@ -84,12 +84,19 @@ pub fn merge_sources(sources: &[ParsedSource], diagnostics: &mut Diagnostics) ->
     let mut runtime_imports = Vec::new();
     let mut runtime_import_seen = HashSet::new();
     let mut local_imports_by_source = Vec::with_capacity(sources.len());
-    for source in sources {
+    for (index, source) in sources.iter().enumerate() {
+        let current_module = &metas[index].module_name;
         let mut local_imports = HashSet::new();
         for import in &source.program.imports {
             if let Some(local_module) = resolve_local_module(&local_alias_map, &import.module) {
-                local_imports.insert(local_module);
-            } else if runtime_import_seen.insert(import.module.clone()) {
+                // Preserve runtime imports when the alias resolves to the current source module.
+                // This avoids collisions such as file "math.checkbe" + `import Math`.
+                if local_module != *current_module {
+                    local_imports.insert(local_module);
+                    continue;
+                }
+            }
+            if runtime_import_seen.insert(import.module.clone()) {
                 runtime_imports.push(import.clone());
             }
         }

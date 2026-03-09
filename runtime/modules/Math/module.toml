@@ -1,0 +1,403 @@
+name = "Math"
+library = "math"
+native_sources = ["math.c"]
+
+[[functions]]
+name = "max"
+
+[[functions.overloads]]
+args = ["int", "int"]
+return = "int"
+symbol = "math_max_i64"
+
+[[functions.overloads]]
+args = ["float", "float"]
+return = "float"
+symbol = "math_max_f64"
+
+[[functions]]
+name = "min"
+
+[[functions.overloads]]
+args = ["int", "int"]
+return = "int"
+symbol = "math_min_i64"
+
+[[functions.overloads]]
+args = ["float", "float"]
+return = "float"
+symbol = "math_min_f64"
+
+[[functions]]
+name = "euler"
+
+[[functions.overloads]]
+args = []
+return = "float"
+symbol = "math_euler"
+
+[[functions]]
+name = "pi"
+
+[[functions.overloads]]
+args = []
+return = "float"
+symbol = "math_pi"
+
+[[functions]]
+name = "abs"
+
+[[functions.overloads]]
+args = ["int"]
+return = "int"
+symbol = "math_abs_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_abs_f64"
+
+[[functions]]
+name = "sign"
+
+[[functions.overloads]]
+args = ["int"]
+return = "int"
+symbol = "math_sign_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "int"
+symbol = "math_sign_f64"
+
+[[functions]]
+name = "sqrt"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_sqrt_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_sqrt_f64"
+
+[[functions]]
+name = "cbrt"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_cbrt_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_cbrt_f64"
+
+[[functions]]
+name = "pow"
+
+[[functions.overloads]]
+args = ["int", "int"]
+return = "float"
+symbol = "math_pow_i64_i64"
+
+[[functions.overloads]]
+args = ["float", "float"]
+return = "float"
+symbol = "math_pow_f64_f64"
+
+[[functions.overloads]]
+args = ["int", "float"]
+return = "float"
+symbol = "math_pow_i64_f64"
+
+[[functions.overloads]]
+args = ["float", "int"]
+return = "float"
+symbol = "math_pow_f64_i64"
+
+[[functions]]
+name = "exp"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_exp_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_exp_f64"
+
+[[functions]]
+name = "log"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_log_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_log_f64"
+
+[[functions]]
+name = "log10"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_log10_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_log10_f64"
+
+[[functions]]
+name = "log2"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_log2_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_log2_f64"
+
+[[functions]]
+name = "floor"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_floor_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_floor_f64"
+
+[[functions]]
+name = "ceil"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_ceil_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_ceil_f64"
+
+[[functions]]
+name = "round"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_round_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_round_f64"
+
+[[functions]]
+name = "trunc"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_trunc_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_trunc_f64"
+
+[[functions]]
+name = "sin"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_sin_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_sin_f64"
+
+[[functions]]
+name = "cos"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_cos_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_cos_f64"
+
+[[functions]]
+name = "tan"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_tan_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_tan_f64"
+
+[[functions]]
+name = "asin"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_asin_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_asin_f64"
+
+[[functions]]
+name = "acos"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_acos_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_acos_f64"
+
+[[functions]]
+name = "atan"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_atan_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_atan_f64"
+
+[[functions]]
+name = "atan2"
+
+[[functions.overloads]]
+args = ["int", "int"]
+return = "float"
+symbol = "math_atan2_i64_i64"
+
+[[functions.overloads]]
+args = ["float", "float"]
+return = "float"
+symbol = "math_atan2_f64_f64"
+
+[[functions.overloads]]
+args = ["int", "float"]
+return = "float"
+symbol = "math_atan2_i64_f64"
+
+[[functions.overloads]]
+args = ["float", "int"]
+return = "float"
+symbol = "math_atan2_f64_i64"
+
+[[functions]]
+name = "hypot"
+
+[[functions.overloads]]
+args = ["int", "int"]
+return = "float"
+symbol = "math_hypot_i64_i64"
+
+[[functions.overloads]]
+args = ["float", "float"]
+return = "float"
+symbol = "math_hypot_f64_f64"
+
+[[functions.overloads]]
+args = ["int", "float"]
+return = "float"
+symbol = "math_hypot_i64_f64"
+
+[[functions.overloads]]
+args = ["float", "int"]
+return = "float"
+symbol = "math_hypot_f64_i64"
+
+[[functions]]
+name = "clamp"
+
+[[functions.overloads]]
+args = ["int", "int", "int"]
+return = "int"
+symbol = "math_clamp_i64"
+
+[[functions.overloads]]
+args = ["float", "float", "float"]
+return = "float"
+symbol = "math_clamp_f64"
+
+[[functions]]
+name = "deg2rad"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_deg2rad_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_deg2rad_f64"
+
+[[functions]]
+name = "rad2deg"
+
+[[functions.overloads]]
+args = ["int"]
+return = "float"
+symbol = "math_rad2deg_i64"
+
+[[functions.overloads]]
+args = ["float"]
+return = "float"
+symbol = "math_rad2deg_f64"
+
+[[functions]]
+name = "is_nan"
+
+[[functions.overloads]]
+args = ["float"]
+return = "bool"
+symbol = "math_is_nan_f64"
+
+[[functions]]
+name = "is_inf"
+
+[[functions.overloads]]
+args = ["float"]
+return = "bool"
+symbol = "math_is_inf_f64"
