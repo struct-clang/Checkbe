@@ -219,3 +219,55 @@ void cb_array_set_ptr(cb_array *array, int64_t index, void *value) {
     void **items = (void **)array->data;
     items[clamp_index(array, index)] = value;
 }
+
+cb_array *cb_build_argv_array(int64_t argc, char **argv) {
+    cb_array *array = cb_array_new_str(argc);
+    if (array == NULL || array->data == NULL || argv == NULL) {
+        return array;
+    }
+
+    char **items = (char **)array->data;
+    for (int64_t i = 0; i < array->len; ++i) {
+        const char *value = argv[i] ? argv[i] : "";
+        items[i] = cb_gc_strdup(value);
+    }
+    return array;
+}
+
+char *cb_array_str_to_string(const cb_array *array) {
+    if (array == NULL || array->data == NULL) {
+        return cb_gc_strdup("[]");
+    }
+
+    char *const *items = (char *const *)array->data;
+    size_t total = 3; /* '[' + ']' + '\0' */
+    if (array->len > 1) {
+        total += (size_t)(array->len - 1) * 2; /* ", " between elements */
+    }
+
+    for (int64_t i = 0; i < array->len; ++i) {
+        const char *value = items[i] ? items[i] : "null";
+        total += strlen(value);
+    }
+
+    char *out = (char *)GC_MALLOC_ATOMIC(total);
+    if (out == NULL) {
+        return cb_gc_strdup("[]");
+    }
+
+    size_t pos = 0;
+    out[pos++] = '[';
+    for (int64_t i = 0; i < array->len; ++i) {
+        if (i > 0) {
+            out[pos++] = ',';
+            out[pos++] = ' ';
+        }
+        const char *value = items[i] ? items[i] : "null";
+        size_t len = strlen(value);
+        memcpy(out + pos, value, len);
+        pos += len;
+    }
+    out[pos++] = ']';
+    out[pos] = '\0';
+    return out;
+}

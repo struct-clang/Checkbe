@@ -1,44 +1,16 @@
 import Bridge
 
 body Application {
-    func triple(value: int) -> int {
-        return value * 3
-    }
-
-    func main() {
-        let int n = 5
-        let int sum = 0
-
-        for (let int i = 0; i < 4; i = i + 1) {
-            sum = sum + i
-        }
-
-        let int w = 0
-        while (w < 2) {
-            w = w + 1
-        }
-
-        let int d = 0
-        do {
-            d = d + 1
-        } while (d < 2)
-
-        if (sum > 10) {
-            Bridge.println("sum is big")
-        } else if (sum > 3) {
-            Bridge.println("sum is medium")
+    func main(argc: int, argv: string[]) {
+        Bridge.println("\(argc) args, args: \(argv)")
+        if (argc > 1) {
+            Bridge.println("argv[1] = \(argv[1])")
         } else {
-            Bridge.println("sum is small")
+            Bridge.println("argv[1] is missing")
         }
-
-        Bridge.println("n = \(n)")
-        Bridge.println("n * 2 + 1 = \(n * 2 + 1)")
-        Bridge.println("triple(n) = \(triple(n))")
-        Bridge.println("sum = \(sum), w = \(w), d = \(d)")
 
         Bridge.sleep(0)
         Bridge.usleep(0)
-        Bridge.system()
-        Bridge.system("echo", "Bridge.system", "works")
+        Bridge.system("echo", "main argc/argv support works")
     }
 }
