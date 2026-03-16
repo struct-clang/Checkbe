@@ -3,11 +3,9 @@
 ## Minimal Program
 
 ```checkbe
-import Bridge
-
 body Application {
     func main() {
-        Bridge.println("Hello")
+        
     }
 }
 ```
